@@ -1,4 +1,5 @@
 const express = require('express');
+const dotenv=require("dotenv")
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -10,7 +11,6 @@ const swaggerSpec = require('./config/swagger');
 const authRoutes = require('./routes/auth.routes');
 const fileRoutes = require('./routes/file.routes');
 const searchRoutes = require('./routes/search.routes');
-const dotenv=require("dotenv")
 
 const app = express();
 
@@ -22,6 +22,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.options('*', cors());
 
 // Rate limiting
 const limiter = rateLimit({
