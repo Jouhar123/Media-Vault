@@ -80,19 +80,26 @@ app.use(
 );
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Rate limiting — general API
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
+  skip: () => process.env.NODE_ENV === 'development',
 });
 app.use('/api', limiter);
 
-// Stricter limit for auth routes
+// Auth routes — stricter but not so tight it blocks normal use
+// 30 attempts per 15 min covers: register, login, refresh, logout, /me on page load
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, message: 'Too many auth attempts, please try again later.' },
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many authentication attempts, please wait and try again.' },
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 // Body parsing

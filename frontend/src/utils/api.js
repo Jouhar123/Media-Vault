@@ -1,8 +1,35 @@
 import axios from 'axios';
 
+// ─── Base URL resolution ────────────────────────────────────────────────────
+// REACT_APP_API_URL is baked in at build time by Create React App.
+// It MUST be set in Vercel's Environment Variables BEFORE building.
+// If it's missing the app will log a clear error instead of silently
+// hitting the wrong host.
+const BASE_URL = process.env.REACT_APP_API_URL;
+
+if (!BASE_URL) {
+  // In development the CRA proxy handles it; in production this is a config error.
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      '❌ REACT_APP_API_URL is not set.\n' +
+      'Go to Vercel → Project → Settings → Environment Variables and add:\n' +
+      '  REACT_APP_API_URL = https://your-backend.railway.app/api\n' +
+      'Then redeploy.'
+    );
+  }
+}
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  // In development fall back to localhost so `npm start` still works without an .env file.
+  // In production, if BASE_URL is missing we still avoid hitting /api on the same host
+  // by using a clearly broken placeholder that surfaces the real error.
+  baseURL: BASE_URL || (
+    process.env.NODE_ENV === 'production'
+      ? 'MISSING_REACT_APP_API_URL'   // will produce a clear network error, not a 429 on Vercel
+      : 'http://localhost:5000/api'
+  ),
   withCredentials: true,
+  timeout: 30000,
 });
 
 // Attach access token to every request
@@ -45,8 +72,9 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) throw new Error('No refresh token');
 
+        const refreshBaseUrl = BASE_URL || 'http://localhost:5000/api';
         const res = await axios.post(
-          `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          `${refreshBaseUrl}/auth/refresh`,
           { refreshToken }
         );
 
