@@ -1,0 +1,287 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+// ─── CSS Variables ─────────────────────────────────────────────────────────────
+:root {
+  --bg-deep:       #0a0a14;
+  --bg-surface:    #11111e;
+  --bg-card:       #16162a;
+  --bg-hover:      #1c1c35;
+  --border:        rgba(138, 99, 255, 0.15);
+  --border-hover:  rgba(138, 99, 255, 0.4);
+
+  --violet:        #8a63ff;
+  --violet-dim:    #6b44e0;
+  --violet-glow:   rgba(138, 99, 255, 0.25);
+  --teal:          #2dd4bf;
+  --teal-dim:      #14b8a6;
+  --amber:         #f59e0b;
+  --rose:          #f43f5e;
+  --emerald:       #10b981;
+
+  --text-primary:  #e8e8f0;
+  --text-secondary:#9898b0;
+  --text-muted:    #5a5a72;
+
+  --radius-sm:     8px;
+  --radius-md:     14px;
+  --radius-lg:     20px;
+  --radius-xl:     28px;
+
+  --shadow-card:   0 4px 32px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --shadow-glow:   0 0 40px rgba(138, 99, 255, 0.2);
+  --transition:    all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// ─── Reset & Base ──────────────────────────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+
+  // Subtle grid background
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(138, 99, 255, 0.12) 0%, transparent 60%),
+    linear-gradient(rgba(138, 99, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 99, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+
+// ─── Typography ────────────────────────────────────────────────────────────────
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+a { color: var(--violet); text-decoration: none; transition: var(--transition); }
+a:hover { color: var(--teal); }
+
+// ─── App Loader ────────────────────────────────────────────────────────────────
+.app-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-deep);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--violet);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ─── Scrollbar ─────────────────────────────────────────────────────────────────
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: rgba(138, 99, 255, 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--violet); }
+
+// ─── Shared UI Components ──────────────────────────────────────────────────────
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  white-space: nowrap;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  &-primary {
+    background: var(--violet);
+    color: #fff;
+    &:hover:not(:disabled) {
+      background: var(--violet-dim);
+      box-shadow: 0 4px 20px rgba(138, 99, 255, 0.4);
+      transform: translateY(-1px);
+    }
+  }
+
+  &-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--border);
+    &:hover:not(:disabled) {
+      border-color: var(--border-hover);
+      background: var(--bg-hover);
+    }
+  }
+
+  &-danger {
+    background: transparent;
+    color: var(--rose);
+    border-color: rgba(244, 63, 94, 0.3);
+    &:hover:not(:disabled) {
+      background: rgba(244, 63, 94, 0.1);
+      border-color: var(--rose);
+    }
+  }
+
+  &-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    &:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-hover); }
+  }
+
+  &-sm { padding: 6px 14px; font-size: 0.82rem; }
+  &-lg { padding: 14px 28px; font-size: 1rem; }
+  &-icon { padding: 8px; border-radius: var(--radius-sm); }
+}
+
+// ─── Card ──────────────────────────────────────────────────────────────────────
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+
+  &:hover { border-color: var(--border-hover); }
+}
+
+// ─── Form Elements ─────────────────────────────────────────────────────────────
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+.input {
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+
+  &::placeholder { color: var(--text-muted); }
+
+  &:focus {
+    border-color: var(--violet);
+    box-shadow: 0 0 0 3px var(--violet-glow);
+  }
+
+  &-error { border-color: var(--rose) !important; }
+}
+
+.error-message {
+  color: var(--rose);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
+// ─── Badge ─────────────────────────────────────────────────────────────────────
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+
+  &-violet { background: rgba(138, 99, 255, 0.15); color: var(--violet); }
+  &-teal   { background: rgba(45, 212, 191, 0.15);  color: var(--teal); }
+  &-amber  { background: rgba(245, 158, 11, 0.15);  color: var(--amber); }
+  &-rose   { background: rgba(244, 63, 94, 0.15);   color: var(--rose); }
+  &-emerald{ background: rgba(16, 185, 129, 0.15);  color: var(--emerald); }
+}
+
+// ─── Pagination ────────────────────────────────────────────────────────────────
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 32px;
+
+  button {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    transition: var(--transition);
+
+    &:hover:not(:disabled) { border-color: var(--violet); color: var(--violet); }
+    &.active { background: var(--violet); color: #fff; border-color: var(--violet); }
+    &:disabled { opacity: 0.3; cursor: not-allowed; }
+  }
+}
+
+// ─── Empty State ───────────────────────────────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 40px;
+  text-align: center;
+
+  .empty-icon { font-size: 3.5rem; opacity: 0.4; }
+  h3 { font-size: 1.3rem; color: var(--text-secondary); }
+  p { color: var(--text-muted); font-size: 0.9rem; max-width: 340px; }
+}
+
+// ─── Animations ────────────────────────────────────────────────────────────────
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.animate-fadeInUp { animation: fadeInUp 0.4s ease both; }
+.animate-fadeIn   { animation: fadeIn 0.3s ease both; }
+
+// ─── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  body { font-size: 0.95rem; }
+}

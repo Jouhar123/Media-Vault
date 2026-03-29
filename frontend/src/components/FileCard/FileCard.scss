@@ -1,0 +1,121 @@
+.file-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+
+  &:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), var(--shadow-glow);
+
+    .file-card__actions { opacity: 1; }
+  }
+
+  &__preview {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: var(--transition);
+    }
+
+    &--image  { background: linear-gradient(135deg, rgba(138,99,255,0.15), rgba(45,212,191,0.1)); }
+    &--video  { background: linear-gradient(135deg, rgba(45,212,191,0.15), rgba(16,185,129,0.1)); }
+    &--audio  { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(244,63,94,0.1)); }
+    &--pdf    { background: linear-gradient(135deg, rgba(244,63,94,0.15), rgba(245,158,11,0.1)); }
+  }
+
+  &:hover &__preview img { transform: scale(1.05); }
+
+  &__placeholder {
+    font-size: 2.8rem;
+    opacity: 0.6;
+  }
+
+  &__type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &__body {
+    padding: 14px 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__name {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__tag {
+    font-size: 0.7rem;
+    color: var(--violet);
+    background: rgba(138, 99, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 500;
+  }
+
+  &__meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__meta-item {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  &__uploader {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: auto;
+  }
+
+  &__actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: var(--transition);
+    background: rgba(10, 10, 20, 0.8);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    backdrop-filter: blur(8px);
+  }
+}

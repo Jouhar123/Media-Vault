@@ -1,0 +1,255 @@
+.upload-page {
+  max-width: 900px;
+  margin: 0 auto;
+
+  &__header {
+    margin-bottom: 32px;
+
+    h1 {
+      font-size: 2rem;
+      background: linear-gradient(135deg, var(--violet), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p { color: var(--text-muted); margin-top: 6px; }
+  }
+
+  &__content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+
+    @media (max-width: 768px) { grid-template-columns: 1fr; }
+  }
+}
+
+// ─── Dropzone ─────────────────────────────────────────────────────────────
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+
+  &:hover, &--active {
+    border-color: var(--violet);
+    background: rgba(138, 99, 255, 0.05);
+    box-shadow: 0 0 0 4px var(--violet-glow);
+  }
+
+  &--filled {
+    border-style: solid;
+    border-color: rgba(45, 212, 191, 0.4);
+    cursor: default;
+  }
+
+  &__idle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 24px;
+    text-align: center;
+  }
+
+  &__icon {
+    font-size: 3.5rem;
+    animation: float 3s ease-in-out infinite alternate;
+  }
+
+  &__text {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__subtext {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+
+  &__types {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  &__preview {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img, video {
+      width: 100%;
+      height: 300px;
+      object-fit: contain;
+      background: var(--bg-surface);
+    }
+  }
+
+  &__audio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px;
+
+    span { font-size: 3rem; }
+
+    audio { width: 100%; }
+  }
+
+  &__pdf {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px;
+
+    span { font-size: 3rem; }
+    p { color: var(--text-secondary); font-size: 0.9rem; text-align: center; word-break: break-all; }
+  }
+
+  &__clear {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+  }
+}
+
+@keyframes float {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-8px); }
+}
+
+// ─── Upload Form ──────────────────────────────────────────────────────────
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &__file-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  &__file-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  &__visibility {
+    padding: 14px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 99px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: var(--transition);
+  cursor: pointer;
+
+  &--on {
+    background: var(--violet);
+    border-color: var(--violet);
+  }
+
+  &__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: var(--transition);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+
+    .toggle--on & { transform: translateX(20px); }
+  }
+}
+
+// ─── Progress Bar ─────────────────────────────────────────────────────────
+.upload-progress {
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--violet), var(--teal));
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
