@@ -40,6 +40,13 @@ const fileSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // Stores the Cloudinary resource_type used at upload ('image' | 'video' | 'raw')
+  // Critical for correct delete/transform API calls
+  cloudinaryResourceType: {
+    type: String,
+    enum: ['image', 'video', 'raw', 'auto'],
+    default: 'image',
+  },
   thumbnailUrl: {
     type: String,
     default: null,

@@ -8,19 +8,24 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Allowed MIME types
-const ALLOWED_TYPES = {
-  'image/jpeg': 'image',
-  'image/png': 'image',
-  'image/gif': 'image',
-  'image/webp': 'image',
-  'video/mp4': 'video',
-  'video/webm': 'video',
+// Allowed MIME types → Cloudinary resource_type
+// IMPORTANT:
+//   - Cloudinary stores PDF as resource_type 'raw' (not 'auto') for reliable delivery
+//   - Cloudinary stores audio under resource_type 'video'
+//   - 'auto' works for upload but makes delete unreliable — always use explicit types
+const MIME_TO_RESOURCE_TYPE = {
+  'image/jpeg':      'image',
+  'image/png':       'image',
+  'image/gif':       'image',
+  'image/webp':      'image',
+  'video/mp4':       'video',
+  'video/webm':      'video',
   'video/quicktime': 'video',
-  'audio/mpeg': 'auto',
-  'audio/wav': 'auto',
-  'audio/ogg': 'auto',
-  'application/pdf': 'auto',
+  'audio/mpeg':      'video',  // Cloudinary stores audio under 'video'
+  'audio/wav':       'video',
+  'audio/ogg':       'video',
+  'audio/mp4':       'video',
+  'application/pdf': 'raw',    // PDFs use 'raw' for reliable signed-URL delivery
 };
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -28,24 +33,30 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
-    const resourceType = ALLOWED_TYPES[file.mimetype] || 'auto';
+    const resourceType = MIME_TO_RESOURCE_TYPE[file.mimetype] || 'raw';
     return {
       folder: 'mediavault',
       resource_type: resourceType,
-      access_mode: 'public',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm', 'mov', 'mp3', 'wav', 'ogg', 'pdf'],
-      transformation: (resourceType === 'image' || file.mimetype === 'application/pdf') 
-  ? [{ quality: 'auto', fetch_format: 'auto' }] 
-  : undefined,
+      // Don't restrict formats at upload — Cloudinary validates by resource_type
+      // Applying image transformations only to images
+      transformation: resourceType === 'image'
+        ? [{ quality: 'auto', fetch_format: 'auto' }]
+        : undefined,
     };
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  if (ALLOWED_TYPES[file.mimetype]) {
+  if (MIME_TO_RESOURCE_TYPE[file.mimetype]) {
     cb(null, true);
   } else {
-    cb(new Error(`File type ${file.mimetype} is not allowed. Allowed types: images, videos, audio, PDF`), false);
+    cb(
+      new Error(
+        `File type "${file.mimetype}" is not supported. ` +
+        `Allowed: JPEG, PNG, GIF, WebP, MP4, WebM, MOV, MP3, WAV, OGG, PDF`
+      ),
+      false
+    );
   }
 };
 
@@ -55,4 +66,4 @@ const upload = multer({
   limits: { fileSize: MAX_FILE_SIZE },
 });
 
-module.exports = { cloudinary, upload, ALLOWED_TYPES };
+module.exports = { cloudinary, upload, MIME_TO_RESOURCE_TYPE };

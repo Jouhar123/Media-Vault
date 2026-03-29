@@ -1,4 +1,3 @@
-const dotenv=require("dotenv")
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -14,15 +13,72 @@ const searchRoutes = require('./routes/search.routes');
 
 const app = express();
 
-// Security Middleware
-app.use(helmet());
-app.use(cors({
-  origin: [process.env.CLIENT_URL ,'http://localhost:3000','https://vercel.com/','https://media-vault-gules.vercel.app/','https://media-vault-y5w8.onrender.com'], 
+// ─── Build allowed origins list ──────────────────────────────────────────────
+// CLIENT_URL can be comma-separated for multiple origins:
+//   e.g. "https://mediavault.vercel.app,http://localhost:3000"
+const rawOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, '')); // strip trailing slash
+
+const corsOptions = {
+  origin: (incomingOrigin, callback) => {
+    // Allow server-to-server / curl (no origin header)
+    if (!incomingOrigin) return callback(null, true);
+
+    const clean = incomingOrigin.replace(/\/$/, '');
+
+    // Exact match
+    if (rawOrigins.includes(clean)) return callback(null, true);
+
+    // Vercel preview deployments: *.vercel.app
+    if (/^https:\/\/[a-z0-9-]+-[a-z0-9]+-[a-z0-9]+\.vercel\.app$/.test(clean))
+      return callback(null, true);
+
+    // Allow any subdomain of a configured vercel domain
+    const vercelBase = rawOrigins.find((o) => o.endsWith('.vercel.app'));
+    if (vercelBase) {
+      const base = vercelBase.replace(/^https?:\/\//, '');
+      if (clean.endsWith(`.${base}`) || clean === `https://${base}`)
+        return callback(null, true);
+    }
+
+    // Railway deployments
+    if (/^https:\/\/.*\.railway\.app$/.test(clean)) return callback(null, true);
+
+    callback(new Error(`CORS: origin '${incomingOrigin}' not allowed`));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization','X-Requested-With', 'Accept'],
-}));
-app.options('*', cors());
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Disposition'],
+  optionsSuccessStatus: 200, // Some browsers (IE11) choke on 204
+};
+
+// Must handle OPTIONS preflight BEFORE helmet so headers are set correctly
+app.options('*', cors(corsOptions));
+
+// Security Middleware — customise Helmet CSP to allow Cloudinary iframes for PDF
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://unpkg.com'],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'blob:'],
+        mediaSrc: ["'self'", 'https://res.cloudinary.com', 'blob:'],
+        // Allow Cloudinary PDF iframes and Swagger UI
+        frameSrc: ["'self'", 'https://res.cloudinary.com', 'https://docs.cloudinary.com'],
+        connectSrc: ["'self'", 'https://res.cloudinary.com', 'wss:', 'ws:'],
+        workerSrc: ["'self'", 'blob:'],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Required for PDF iframe + media
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -56,7 +112,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth',  authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/search', searchRoutes);
 
