@@ -17,7 +17,7 @@ const app = express();
 // Security Middleware
 app.use(helmet());
 app.use(cors({
-  origin: [process.env.CLIENT_URL ,'http://localhost:3000','https://media-vault-frontend.onrender.com'], 
+  origin: [process.env.CLIENT_URL ,'http://localhost:3000','https://vercel.com/','https://media-vault-gules.vercel.app/'], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization','X-Requested-With', 'Accept'],
