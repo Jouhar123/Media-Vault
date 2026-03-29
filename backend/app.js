@@ -1,5 +1,5 @@
-const express = require('express');
 const dotenv=require("dotenv")
+const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -20,7 +20,7 @@ app.use(cors({
   origin: [process.env.CLIENT_URL ,'http://localhost:3000','https://media-vault-frontend.onrender.com'], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization','X-Requested-With', 'Accept'],
 }));
 app.options('*', cors());
 
