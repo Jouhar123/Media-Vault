@@ -1,103 +1,117 @@
 import axios from 'axios';
 
-// ─── Base URL resolution ────────────────────────────────────────────────────
-// REACT_APP_API_URL is baked in at build time by Create React App.
-// It MUST be set in Vercel's Environment Variables BEFORE building.
-// If it's missing the app will log a clear error instead of silently
-// hitting the wrong host.
-const BASE_URL = process.env.REACT_APP_API_URL;
-
-if (!BASE_URL) {
-  // In development the CRA proxy handles it; in production this is a config error.
-  if (process.env.NODE_ENV === 'production') {
-    console.error(
-      '❌ REACT_APP_API_URL is not set.\n' +
-      'Go to Vercel → Project → Settings → Environment Variables and add:\n' +
-      '  REACT_APP_API_URL = https://your-backend.railway.app/api\n' +
-      'Then redeploy.'
-    );
-  }
-}
+const BASE_URL = process.env.REACT_APP_API_URL || (
+  process.env.NODE_ENV === 'production'
+    ? 'MISSING_REACT_APP_API_URL'
+    : 'http://localhost:5000/api'
+);
 
 const api = axios.create({
-  // In development fall back to localhost so `npm start` still works without an .env file.
-  // In production, if BASE_URL is missing we still avoid hitting /api on the same host
-  // by using a clearly broken placeholder that surfaces the real error.
-  baseURL: BASE_URL || (
-    process.env.NODE_ENV === 'production'
-      ? 'MISSING_REACT_APP_API_URL'   // will produce a clear network error, not a 429 on Vercel
-      : 'http://localhost:5000/api'
-  ),
+  baseURL: BASE_URL,
   withCredentials: true,
   timeout: 30000,
 });
 
-// Attach access token to every request
+// --- State for Refresh Logic ---
+let isRefreshing = false;
+let failedQueue = [];
+let refreshAttempts = 0;
+const MAX_REFRESH_ATTEMPTS = 1;
+
+// --- Force Logout Handler ---
+let _onForceLogout = null;
+export const setForceLogoutHandler = (fn) => { _onForceLogout = fn; };
+
+const _handleForceLogout = () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  refreshAttempts = 0;
+  isRefreshing = false;
+
+  if (_onForceLogout) {
+    _onForceLogout();
+  } else if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.replace('/login');
+  }
+};
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
+  failedQueue = [];
+};
+
+// --- Request Interceptor ---
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Auto-refresh on 401
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => error ? prom.reject(error) : prom.resolve(token));
-  failedQueue = [];
-};
+// --- Response Interceptor (The Magic) ---
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) throw new Error('No refresh token');
-
-        const refreshBaseUrl = BASE_URL || 'http://localhost:5000/api';
-        const res = await axios.post(
-          `${refreshBaseUrl}/auth/refresh`,
-          { refreshToken }
-        );
-
-        const newToken = res.data.data.accessToken;
-        localStorage.setItem('accessToken', newToken);
-        localStorage.setItem('refreshToken', res.data.data.refreshToken);
-
-        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        processQueue(null, newToken);
-        return api(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+    // Skip refresh logic for non-401s, already retried requests, or auth endpoints
+    if (
+      error.response?.status !== 401 ||
+      originalRequest._retry ||
+      originalRequest.url?.includes('/auth/refresh') ||
+      originalRequest.url?.includes('/auth/login')
+    ) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    // Circuit Breaker
+    if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
+      processQueue(error, null);
+      _handleForceLogout();
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+    refreshAttempts += 1;
+
+    try {
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      if (!storedRefreshToken) throw new Error('No refresh token');
+
+      const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+        refreshToken: storedRefreshToken,
+      });
+
+      const { accessToken, refreshToken } = res.data.data;
+
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+
+      api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+      processQueue(null, accessToken);
+      refreshAttempts = 0; // Reset on success
+      return api(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      _handleForceLogout();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 

@@ -1,7 +1,20 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../utils/api';
 
-// Async thunks
+// ─── Safe localStorage read ────────────────────────────────────────────────
+const getStoredToken = () => {
+  try { return localStorage.getItem('accessToken') || null; }
+  catch { return null; }
+};
+
+const clearStoredTokens = () => {
+  try {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  } catch { /* ignore */ }
+};
+
+// ─── Async thunks ─────────────────────────────────────────────────────────
 export const register = createAsyncThunk('auth/register', async (data, { rejectWithValue }) => {
   try {
     const res = await api.post('/auth/register', data);
@@ -24,20 +37,21 @@ export const login = createAsyncThunk('auth/login', async (data, { rejectWithVal
   }
 });
 
-export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
-  try {
-    await api.post('/auth/logout');
-  } catch (err) { /* always clear */ }
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
+export const logout = createAsyncThunk('auth/logout', async () => {
+  try { await api.post('/auth/logout'); } catch { /* always clear locally */ }
+  clearStoredTokens();
 });
 
 export const fetchMe = createAsyncThunk('auth/fetchMe', async (_, { rejectWithValue }) => {
+  const token = getStoredToken();
+  if (!token) return rejectWithValue('no_token');
+
   try {
     const res = await api.get('/auth/me');
     return res.data.data.user;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Failed to fetch user');
+    if (err.response?.status === 401) clearStoredTokens();
+    return rejectWithValue(err.response?.data?.message || 'session_expired');
   }
 });
 
@@ -50,50 +64,54 @@ export const refreshTokens = createAsyncThunk('auth/refresh', async (_, { reject
     localStorage.setItem('refreshToken', res.data.data.refreshToken);
     return res.data.data;
   } catch (err) {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearStoredTokens();
     return rejectWithValue('Session expired');
   }
 });
 
+// ─── Slice ────────────────────────────────────────────────────────────────
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    accessToken: localStorage.getItem('accessToken'),
-    isAuthenticated: !!localStorage.getItem('accessToken'),
+    accessToken: getStoredToken(),
+    isAuthenticated: false, // Wait for fetchMe or Login to confirm
     loading: false,
     error: null,
-    initialized: false,
+    initialized: false, // Unblocks ProtectedRoute once true
   },
   reducers: {
     clearError: (state) => { state.error = null; },
-    setTokens: (state, action) => {
-      state.accessToken = action.payload.accessToken;
-      state.isAuthenticated = true;
+    forceLogout: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
+      state.initialized = true;
+      clearStoredTokens();
     },
   },
   extraReducers: (builder) => {
-    // Register
-    builder.addCase(register.pending, (state) => { state.loading = true; state.error = null; });
-    builder.addCase(register.fulfilled, (state, action) => {
+    // Auth Pending States
+    builder.addMatcher(
+      (action) => action.type.endsWith('/pending') && !action.type.includes('fetchMe'),
+      (state) => { state.loading = true; state.error = null; }
+    );
+
+    // Login & Register Fulfilled
+    const setAuthSuccess = (state, action) => {
       state.loading = false;
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
-    });
+      state.initialized = true;
+    };
+    builder.addCase(register.fulfilled, setAuthSuccess);
+    builder.addCase(login.fulfilled, setAuthSuccess);
+
+    // Auth Rejected
     builder.addCase(register.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload;
-    });
-
-    // Login
-    builder.addCase(login.pending, (state) => { state.loading = true; state.error = null; });
-    builder.addCase(login.fulfilled, (state, action) => {
-      state.loading = false;
-      state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
-      state.isAuthenticated = true;
     });
     builder.addCase(login.rejected, (state, action) => {
       state.loading = false;
@@ -105,18 +123,25 @@ const authSlice = createSlice({
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
+      state.initialized = true;
     });
 
-    // Fetch Me
+    // fetchMe
+    builder.addCase(fetchMe.pending, (state) => {
+      state.loading = true;
+    });
     builder.addCase(fetchMe.fulfilled, (state, action) => {
+      state.loading = false;
       state.user = action.payload;
       state.isAuthenticated = true;
       state.initialized = true;
     });
     builder.addCase(fetchMe.rejected, (state) => {
+      state.loading = false;
       state.user = null;
+      state.accessToken = null;
       state.isAuthenticated = false;
-      state.initialized = true;
+      state.initialized = true; 
     });
 
     // Refresh
@@ -132,5 +157,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setTokens } = authSlice.actions;
+export const { clearError, forceLogout } = authSlice.actions;
 export default authSlice.reducer;
