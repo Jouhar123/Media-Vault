@@ -64,8 +64,10 @@ const SearchPage = () => {
 
   // Re-run when filters change (if already searched)
   useEffect(() => {
-    if (hasSearched) runSearch(1);
-  }, [filters]);
+  if (hasSearched) {
+    runSearch(1);
+  }
+}, [filters, hasSearched, runSearch]);
 
   useEffect(() => {
     return () => { dispatch(clearSearch()); };

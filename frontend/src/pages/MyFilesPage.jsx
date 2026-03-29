@@ -16,7 +16,6 @@ const FILTERS = [
 const MyFilesPage = () => {
   const dispatch = useDispatch();
   const { items, loading, pagination } = useSelector((s) => s.files);
-  const { user } = useSelector((s) => s.auth);
   const [fileType, setFileType] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [page, setPage] = useState(1);
